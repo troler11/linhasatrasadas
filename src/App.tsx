@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 interface PontoParada {
   id: number;
   horario: string;
-  tempoDiferenca: string | number; // Exemplo: 5 ou "00:05"
+  tempoDiferenca: string | number;
   passou: boolean;
 }
 
@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const [dados, setDados] = useState<Relatorio[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Converte formatos "00:05" ou "5" para minutos numéricos
+  // Converte formatos "00:05", "5" ou 5 para minutos numéricos
   const converterParaMinutos = (tempo: string | number): number => {
     if (typeof tempo === 'number') return tempo;
     if (tempo.includes(':')) {
@@ -39,11 +39,16 @@ const App: React.FC = () => {
     const minutosBase = (h * 60) + m;
     const minutosDiff = converterParaMinutos(diferenca);
 
-    // Regra: Atrasado (true) soma | Adiantado (false) subtrai
+    // NOVA REGRA: 
+    // Se atrasado for true -> horario + tempoDiferenca
+    // Se atrasado for false -> horario - tempoDiferenca
     const novoTotal = isAtrasado ? minutosBase + minutosDiff : minutosBase - minutosDiff;
 
+    // Garante que o horário não seja negativo (caso o adiantamento seja maior que a hora)
+    const totalAjustado = novoTotal < 0 ? 0 : novoTotal;
+
     const dataFinal = new Date();
-    dataFinal.setHours(0, novoTotal, 0);
+    dataFinal.setHours(0, totalAjustado, 0);
 
     return dataFinal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
@@ -56,18 +61,19 @@ const App: React.FC = () => {
       });
       const data = await response.json();
       const lista = Array.isArray(data) ? data : [data];
-      // Filtra para exibir apenas atrasados
-      setDados(lista.filter(item => item.atrasado === true));
+      
+      // Agora mostramos todos para você ver a diferença entre soma e subtração
+      setDados(lista);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading) return <div style={{padding: '20px'}}>Carregando monitoramento completo...</div>;
+  if (loading) return <div style={{padding: '20px'}}>Processando horários...</div>;
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
-      <h1 style={{ color: '#2c3e50', marginBottom: '20px' }}>📋 Relatório Detalhado de Atrasos</h1>
+      <h1 style={{ color: '#2c3e50', marginBottom: '20px' }}>📋 Painel de Controle de Pontualidade</h1>
       
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
@@ -77,9 +83,9 @@ const App: React.FC = () => {
               <th style={{ padding: '12px' }}>Placa</th>
               <th style={{ padding: '12px' }}>H. Inicial</th>
               <th style={{ padding: '12px' }}>H. Final Prog.</th>
-              <th style={{ padding: '12px', backgroundColor: '#8e44ad' }}>H. Final Realizado</th>
+              <th style={{ padding: '12px', backgroundColor: '#2980b9' }}>H. Final Realizado</th>
               <th style={{ padding: '12px' }}>Diferença</th>
-              <th style={{ padding: '12px' }}>Status</th>
+              <th style={{ padding: '12px' }}>Tipo</th>
             </tr>
           </thead>
           <tbody>
@@ -91,8 +97,8 @@ const App: React.FC = () => {
               const hInicial = primeiroPonto?.horario || '--:--';
               const hFinalProg = ultimoPonto?.horario || '--:--';
               
-              // Regra de cálculo: passou (true) && atrasado (true)
-              const hFinalRealizado = (ultimoPonto?.passou && item.atrasado)
+              // Executa o cálculo se o veículo passou pelo ponto
+              const hFinalRealizado = (ultimoPonto?.passou)
                 ? calcularHorarioRealizado(hFinalProg, ultimoPonto.tempoDiferenca, item.atrasado)
                 : hFinalProg;
 
@@ -103,17 +109,24 @@ const App: React.FC = () => {
                     <div style={{ fontSize: '0.8em', color: '#7f8c8d' }}>{item.linhaDescricao}</div>
                   </td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.placa}</td>
-                  <td style={{ padding: '12px', color: '#2980b9' }}>{hInicial}</td>
+                  <td style={{ padding: '12px' }}>{hInicial}</td>
                   <td style={{ padding: '12px' }}>{hFinalProg}</td>
-                  <td style={{ padding: '12px', fontWeight: 'bold', color: '#8e44ad' }}>
+                  <td style={{ padding: '12px', fontWeight: 'bold', color: '#2980b9' }}>
                     {hFinalRealizado}
                   </td>
-                  <td style={{ padding: '12px', color: '#e67e22' }}>
-                    {ultimoPonto?.tempoDiferenca} min
+                  <td style={{ padding: '12px', color: item.atrasado ? '#e74c3c' : '#27ae60', fontWeight: 'bold' }}>
+                    {item.atrasado ? `+${ultimoPonto?.tempoDiferenca}` : `-${ultimoPonto?.tempoDiferenca}`} min
                   </td>
                   <td style={{ padding: '12px' }}>
-                    <span style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: '0.85em' }}>
-                      {item.status}
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      fontSize: '0.8em',
+                      backgroundColor: item.atrasado ? '#fdecea' : '#eafaf1',
+                      color: item.atrasado ? '#e74c3c' : '#27ae60',
+                      fontWeight: 'bold'
+                    }}>
+                      {item.atrasado ? 'ATRASADO' : 'ADIANTADO'}
                     </span>
                   </td>
                 </tr>
