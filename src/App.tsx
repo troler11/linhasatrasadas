@@ -8,7 +8,7 @@ interface Relatorio {
   placa: string;
   motorista: string;
   status: string;
-  atrasado: boolean; // Novo campo adicionado
+  atrasado: boolean(true); // Novo campo adicionado
   empresa: { nome: string };
   veiculo: { veiculo: string };
 }
