@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 interface PontoParada {
   id: number;
   horario: string;
-  tempoDiferenca: string | number; // Aceita "05", "00:05" ou 5
+  tempoDiferenca: string | number; // Exemplo: 5 ou "00:05"
   passou: boolean;
 }
 
@@ -14,6 +14,7 @@ interface Relatorio {
   placa: string;
   status: string;
   atrasado: boolean;
+  empresa: { nome: string };
   pontoDeParadaRelatorio: PontoParada[];
 }
 
@@ -21,7 +22,7 @@ const App: React.FC = () => {
   const [dados, setDados] = useState<Relatorio[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Função robusta para converter qualquer formato de tempo em minutos
+  // Converte formatos "00:05" ou "5" para minutos numéricos
   const converterParaMinutos = (tempo: string | number): number => {
     if (typeof tempo === 'number') return tempo;
     if (tempo.includes(':')) {
@@ -38,7 +39,7 @@ const App: React.FC = () => {
     const minutosBase = (h * 60) + m;
     const minutosDiff = converterParaMinutos(diferenca);
 
-    // Regra: Atrasado (True) -> Soma | Adiantado (False) -> Subtrai
+    // Regra: Atrasado (true) soma | Adiantado (false) subtrai
     const novoTotal = isAtrasado ? minutosBase + minutosDiff : minutosBase - minutosDiff;
 
     const dataFinal = new Date();
@@ -55,55 +56,63 @@ const App: React.FC = () => {
       });
       const data = await response.json();
       const lista = Array.isArray(data) ? data : [data];
-      // Filtra para mostrar apenas os casos onde atrasado é true
+      // Filtra para exibir apenas atrasados
       setDados(lista.filter(item => item.atrasado === true));
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading) return <div style={{padding: '20px'}}>Processando dados de telemetria...</div>;
+  if (loading) return <div style={{padding: '20px'}}>Carregando monitoramento completo...</div>;
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f9f9f9', minHeight: '100vh' }}>
-      <h1 style={{ color: '#2c3e50', borderBottom: '2px solid #e74c3c', paddingBottom: '10px' }}>
-        🚩 Painel de Atrasos Realizados
-      </h1>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
+      <h1 style={{ color: '#2c3e50', marginBottom: '20px' }}>📋 Relatório Detalhado de Atrasos</h1>
       
-      <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: '#2c3e50', color: '#fff' }}>
+      <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
+          <thead style={{ backgroundColor: '#34495e', color: '#fff' }}>
             <tr>
-              <th style={{ padding: '15px' }}>Placa</th>
-              <th style={{ padding: '15px' }}>Prog. Fim</th>
-              <th style={{ padding: '15px' }}>Diferença</th>
-              <th style={{ padding: '15px', backgroundColor: '#8e44ad' }}>Realizado Fim</th>
-              <th style={{ padding: '15px' }}>Status</th>
+              <th style={{ padding: '12px' }}>Empresa / Linha</th>
+              <th style={{ padding: '12px' }}>Placa</th>
+              <th style={{ padding: '12px' }}>H. Inicial</th>
+              <th style={{ padding: '12px' }}>H. Final Prog.</th>
+              <th style={{ padding: '12px', backgroundColor: '#8e44ad' }}>H. Final Realizado</th>
+              <th style={{ padding: '12px' }}>Diferença</th>
+              <th style={{ padding: '12px' }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {dados.map((item) => {
               const pontos = item.pontoDeParadaRelatorio || [];
+              const primeiroPonto = pontos[0];
               const ultimoPonto = pontos[pontos.length - 1];
-              const horarioFimProg = ultimoPonto?.horario || '--:--';
+
+              const hInicial = primeiroPonto?.horario || '--:--';
+              const hFinalProg = ultimoPonto?.horario || '--:--';
               
-              // Cálculo baseado na sua regra: passou (true) && atrasado (true)
-              const realizado = (ultimoPonto?.passou && item.atrasado)
-                ? calcularHorarioRealizado(horarioFimProg, ultimoPonto.tempoDiferenca, item.atrasado)
-                : horarioFimProg;
+              // Regra de cálculo: passou (true) && atrasado (true)
+              const hFinalRealizado = (ultimoPonto?.passou && item.atrasado)
+                ? calcularHorarioRealizado(hFinalProg, ultimoPonto.tempoDiferenca, item.atrasado)
+                : hFinalProg;
 
               return (
-                <tr key={item.id} style={{ textAlign: 'center', borderBottom: '1px solid #eee' }}>
+                <tr key={item.id} style={{ borderBottom: '1px solid #eee', textAlign: 'center' }}>
+                  <td style={{ padding: '12px', textAlign: 'left' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '0.9em' }}>{item.empresa?.nome}</div>
+                    <div style={{ fontSize: '0.8em', color: '#7f8c8d' }}>{item.linhaDescricao}</div>
+                  </td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.placa}</td>
-                  <td style={{ padding: '12px' }}>{horarioFimProg}</td>
-                  <td style={{ padding: '12px', color: '#e67e22', fontWeight: 'bold' }}>
+                  <td style={{ padding: '12px', color: '#2980b9' }}>{hInicial}</td>
+                  <td style={{ padding: '12px' }}>{hFinalProg}</td>
+                  <td style={{ padding: '12px', fontWeight: 'bold', color: '#8e44ad' }}>
+                    {hFinalRealizado}
+                  </td>
+                  <td style={{ padding: '12px', color: '#e67e22' }}>
                     {ultimoPonto?.tempoDiferenca} min
                   </td>
-                  <td style={{ padding: '12px', fontWeight: 'bold', color: '#8e44ad', fontSize: '1.1em' }}>
-                    {realizado}
-                  </td>
                   <td style={{ padding: '12px' }}>
-                    <span style={{ backgroundColor: '#fdecea', color: '#e74c3c', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9em' }}>
+                    <span style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: '0.85em' }}>
                       {item.status}
                     </span>
                   </td>
