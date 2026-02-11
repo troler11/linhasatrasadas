@@ -26,17 +26,6 @@ const App: React.FC = () => {
       
       const listaTotal = Array.isArray(json) ? json : [json];
       
-      // FILTRO: Apenas o que for atrasado === true
-      const apenasAtrasados = listaTotal.filter(item => item.atrasado === true);
-      
-      setDados(apenasAtrasados);
-    } catch (error) {
-      console.error("Erro:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => { fetchData(); }, []);
 
   if (loading) return <div style={{padding: '20px'}}>Buscando apenas veículos atrasados...</div>;
