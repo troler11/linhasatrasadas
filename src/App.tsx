@@ -52,6 +52,7 @@ const App: React.FC = () => {
           <tr>
             <th>Data</th>
             <th>Empresa</th>
+             <th>Atrasado</th>
             <th>Placa</th>
             <th>Status</th>
           </tr>
