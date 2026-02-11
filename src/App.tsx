@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 interface Relatorio {
   id: number;
   data: string;
+  atrasado:string;
   linhaDescricao: string;
   placa: string;
   motorista: string;
@@ -60,6 +61,7 @@ const App: React.FC = () => {
             <tr key={item.id}>
               <td>{item.data}</td>
               <td>{item.empresa?.nome}</td>
+              <td>{item.atrasado}</td>
               <td>{item.placa}</td>
               <td>{item.status}</td>
             </tr>
