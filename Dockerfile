@@ -1,30 +1,23 @@
-# Estágio 1: Build (Compilação do TypeScript/React)
-FROM node:20-slim AS build
+FROM node:20 AS build
 
 WORKDIR /app
 
-# Copia os arquivos de dependências
-COPY package*.json ./
+# O ponto (.) indica o diretório atual do seu repositório/Easypanel
+# Certifique-se de que o package.json está no mesmo nível que o Dockerfile
+COPY package.json package-lock.json* ./
 
-# Instala as dependências
+# Adicionamos um comando para listar os arquivos e conferir se ele "chegou" lá (ajuda no debug)
+RUN ls -la
+
 RUN npm install
 
-# Copia o restante dos arquivos do projeto
 COPY . .
 
-# Executa o build do projeto (gera a pasta dist ou build)
 RUN npm run build
 
-# Estágio 2: Serve (Servidor Nginx para rodar o site)
+# --- Estágio do Nginx ---
 FROM nginx:alpine
-
-# Copia o build do estágio anterior para a pasta do Nginx
-# Se o seu projeto usa Vite, a pasta é 'dist'. Se usa Create React App, é 'build'.
 COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copia uma configuração customizada do Nginx (opcional, mas recomendado)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
