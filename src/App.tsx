@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 interface Relatorio {
   id: number;
   data: string;
-  atrasado:string;
+  atrasado: true;
   linhaDescricao: string;
   placa: string;
   motorista: string;
