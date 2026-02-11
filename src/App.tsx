@@ -61,18 +61,19 @@ const App: React.FC = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading) return <div style={{padding: '20px'}}>Calculando pontualidade...</div>;
+  if (loading) return <div style={{padding: '20px'}}>Sincronizando dados de viagem...</div>;
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
-      <h1 style={{ color: '#2c3e50', marginBottom: '20px' }}>📋 Painel de Controle de Pontualidade</h1>
+      <h1 style={{ color: '#2c3e50', marginBottom: '20px' }}>📋 Monitoramento de Pontualidade Real</h1>
       
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1100px' }}>
           <thead style={{ backgroundColor: '#34495e', color: '#fff' }}>
             <tr>
               <th style={{ padding: '12px' }}>Empresa / Linha</th>
               <th style={{ padding: '12px' }}>Placa</th>
+              <th style={{ padding: '12px' }}>H. Inicial</th>
               <th style={{ padding: '12px' }}>H. Final Prog.</th>
               <th style={{ padding: '12px', backgroundColor: '#2980b9' }}>H. Final Realizado</th>
               <th style={{ padding: '12px' }}>Diferença</th>
@@ -82,7 +83,10 @@ const App: React.FC = () => {
           <tbody>
             {dados.map((item) => {
               const pontos = item.pontoDeParadaRelatorio || [];
+              const primeiroPonto = pontos[0];
               const ultimoPonto = pontos[pontos.length - 1];
+
+              const hInicial = primeiroPonto?.horario || '--:--';
               const hFinalProg = ultimoPonto?.horario || '--:--';
               
               const hFinalRealizado = (ultimoPonto?.passou)
@@ -96,6 +100,7 @@ const App: React.FC = () => {
                     <div style={{ fontSize: '0.8em', color: '#7f8c8d' }}>{item.linhaDescricao}</div>
                   </td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.placa}</td>
+                  <td style={{ padding: '12px', color: '#34495e' }}>{hInicial}</td>
                   <td style={{ padding: '12px' }}>{hFinalProg}</td>
                   <td style={{ padding: '12px', fontWeight: 'bold', color: '#2980b9' }}>
                     {hFinalRealizado}
