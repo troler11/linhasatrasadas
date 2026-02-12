@@ -78,7 +78,6 @@ const App: React.FC = () => {
 
         const pontoRef = item.sentido === 'Saída' ? pontos[0] : pontos[pontos.length - 1];
         
-        // Regra: Passou pelo ponto E Atrasado E Diferença maior que 10
         if (pontoRef && pontoRef.passou && item.atrasado === true) {
           const diff = converterParaMinutos(pontoRef.tempoDiferenca);
           return diff > 10;
@@ -108,7 +107,9 @@ const App: React.FC = () => {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-      <h1 style={{ color: '#c0392b' }}>⚠️ Relatório de Atrasos Críticos (Superior a 10min)</h1>
+      <h1 style={{ color: '#c0392b' }}>
+        {`⚠️ Relatório de Atrasos Críticos (Acima de 10 min)`}
+      </h1>
 
       <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
         <div>
@@ -133,7 +134,7 @@ const App: React.FC = () => {
               <th style={{ padding: '12px' }}>Sentido</th>
               <th style={{ padding: '12px' }}>H. Inic. Real.</th>
               <th style={{ padding: '12px' }}>H. Final Real.</th>
-              <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>Minutos de Atraso</th>
+              <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>Atraso</th>
             </tr>
           </thead>
           <tbody>
@@ -162,7 +163,7 @@ const App: React.FC = () => {
                     {pFim ? calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, item.atrasado) : '--:--'}
                   </td>
                   <td style={{ padding: '12px', color: '#e74c3c', fontWeight: 'bold' }}>
-                    {pRef ? `+${pRef.tempoDiferenca}` : '0'} min
+                    {pRef ? `+${pRef.tempoDiferenca} min` : '0 min'}
                   </td>
                 </tr>
               );
@@ -171,7 +172,7 @@ const App: React.FC = () => {
         </table>
         {dadosFiltrados.length === 0 && !loading && (
           <div style={{ padding: '40px', textAlign: 'center', color: '#27ae60' }}>
-             ✅ Tudo em ordem para os critérios selecionados.
+             {`✅ Nenhum atraso crítico encontrado.`}
           </div>
         )}
       </div>
