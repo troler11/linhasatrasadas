@@ -11,7 +11,7 @@ interface Relatorio {
   id: number;
   data: string;
   linhaDescricao: string;
-  placa: string;
+  descricaoVeiculo: string;
   status: string;
   sentido: string; 
   atrasado: boolean;
@@ -152,7 +152,7 @@ const App: React.FC = () => {
             <thead style={{ backgroundColor: '#c0392b', color: '#fff' }}>
               <tr>
                 <th style={{ padding: '12px' }}>Empresa / Linha</th>
-                <th style={{ padding: '12px' }}>Placa</th>
+                <th style={{ padding: '12px' }}>Prefixo</th>
                 <th style={{ padding: '12px' }}>Sentido</th>
                 <th style={{ padding: '12px' }}>H. Programado</th>
                 <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>H. Realizado</th>
@@ -172,7 +172,7 @@ const App: React.FC = () => {
                       <div style={{ fontWeight: 'bold' }}>{item.empresa?.nome}</div>
                       <div style={{ fontSize: '0.8em', color: '#666' }}>{item.linhaDescricao}</div>
                     </td>
-                    <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.placa}</td>
+                    <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.descricaoVeiculo}</td>
                     <td style={{ padding: '12px' }}>{item.sentido}</td>
                     <td style={{ padding: '12px' }}>{hProg}</td>
                     <td style={{ padding: '12px', fontWeight: 'bold', color: '#c0392b' }}>{hRealizado}</td>
