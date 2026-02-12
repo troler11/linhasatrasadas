@@ -4,7 +4,7 @@ interface PontoParada {
   id: number;
   horario: string;
   tempoDiferenca: string | number;
-  passou: boolean; // Campo crucial para a validação
+  passou: boolean;
 }
 
 interface Relatorio {
@@ -27,7 +27,6 @@ const App: React.FC = () => {
   
   const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0]);
   const [filtroEmpresa, setFiltroEmpresa] = useState<string>('TODAS');
-  const [filtroSentido, setFiltroSentido] = useState<string>('TODOS');
 
   const converterParaMinutos = (tempo: string | number): number => {
     if (typeof tempo === 'number') return tempo;
@@ -38,13 +37,21 @@ const App: React.FC = () => {
     return parseInt(tempo?.toString(), 10) || 0;
   };
 
-  const calcularHorarioRealizado = (horarioBase: string, diferenca: string | number) => {
+  const calcularHorarioRealizado = (horarioBase: string, diferenca: string | number, isAtrasado: boolean) => {
     if (!horarioBase) return '--:--';
     const [h, m] = horarioBase.split(':').map(Number);
     const minutosDiff = converterParaMinutos(diferenca);
+
     const data = new Date();
     data.setHours(h, m, 0, 0);
-    data.setMinutes(data.getMinutes() + minutosDiff);
+
+    // Regra de soma/subtração baseada no status de atraso
+    if (isAtrasado) {
+      data.setMinutes(data.getMinutes() + minutosDiff);
+    } else {
+      data.setMinutes(data.getMinutes() - minutosDiff);
+    }
+
     return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -65,24 +72,28 @@ const App: React.FC = () => {
       const data = await response.json();
       const lista = Array.isArray(data) ? data : [data];
 
-      const filtrados = lista.filter(item => {
+      const apenasCriticos = lista.filter(item => {
         const pontos = item.pontoDeParadaRelatorio || [];
         if (pontos.length === 0) return false;
 
-        // Define o ponto de referência baseado no sentido
+        // Ponto de referência: Saída (1º ponto), Entrada (Último ponto)
         const pontoRef = item.sentido === 'Saída' ? pontos[0] : pontos[pontos.length - 1];
         
-        // CORREÇÃO: Só considera se 'passou' for true e 'atrasado' for true
-        if (pontoRef && pontoRef.passou === true && item.atrasado === true) {
+        // REGRA SOLICITADA:
+        // 1. Deve ter passado pelo ponto (passou === true)
+        // 2. Deve estar marcado como atrasado (atrasado === true)
+        // 3. A diferença deve ser superior a 10 minutos
+        if (pontoRef && pontoRef.passou && item.atrasado === true) {
           const diff = converterParaMinutos(pontoRef.tempoDiferenca);
           return diff > 10;
         }
 
+        // Se atrasado for false ou não passou, descarta (não aparece no relatório)
         return false; 
       });
 
-      setDadosOriginal(filtrados);
-      setDadosFiltrados(filtrados);
+      setDadosOriginal(apenasCriticos);
+      setDadosFiltrados(apenasCriticos);
     } catch (err) { 
         console.error(err);
         setDadosOriginal([]);
@@ -94,31 +105,27 @@ const App: React.FC = () => {
   useEffect(() => {
     let resultado = dadosOriginal;
     if (filtroEmpresa !== 'TODAS') resultado = resultado.filter(d => d.empresa.nome === filtroEmpresa);
-    if (filtroSentido !== 'TODOS') resultado = resultado.filter(d => d.sentido === filtroSentido);
     setDadosFiltrados(resultado);
-  }, [filtroEmpresa, filtroSentido, dadosOriginal]);
+  }, [filtroEmpresa, dadosOriginal]);
 
   const empresasUnicas = Array.from(new Set(dadosOriginal.map(d => d.empresa.nome))).sort();
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-      <h1 style={{ color: '#c0392b' }}>⚠️ Monitoramento de Atrasos Reais (+10min)</h1>
+      <h1 style={{ color: '#c0392b' }}>⚠️ Relatório de Atrasos Críticos (Apenas Atrasos > 10min)</h1>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+      <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
         <div>
           <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Data:</label>
           <input type="date" value={dataSelecionada} onChange={(e) => setDataSelecionada(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #c0392b' }} />
         </div>
         <div>
           <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Empresa:</label>
-          <select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
-            <option value="TODAS">Todas</option>
+          <select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '200px' }}>
+            <option value="TODAS">Todas as Empresas</option>
             {empresasUnicas.map(emp => <option key={emp} value={emp}>{emp}</option>)}
           </select>
         </div>
-        <button onClick={() => fetchData(dataSelecionada)} style={{ alignSelf: 'flex-end', padding: '10px 20px', backgroundColor: '#2c3e50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-          🔄 Atualizar
-        </button>
       </div>
 
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
@@ -130,7 +137,7 @@ const App: React.FC = () => {
               <th style={{ padding: '12px' }}>Sentido</th>
               <th style={{ padding: '12px' }}>H. Inic. Real.</th>
               <th style={{ padding: '12px' }}>H. Final Real.</th>
-              <th style={{ padding: '12px' }}>Atraso Validado</th>
+              <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>Atraso Somado</th>
             </tr>
           </thead>
           <tbody>
@@ -147,18 +154,31 @@ const App: React.FC = () => {
                     <div style={{ fontSize: '0.8em', color: '#666' }}>{item.linhaDescricao}</div>
                   </td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.descricaoVeiculo}</td>
-                  <td style={{ padding: '12px' }}>{item.sentido}</td>
-                  <td style={{ padding: '12px' }}>{calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca)}</td>
-                  <td style={{ padding: '12px', fontWeight: 'bold' }}>{calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca)}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{ fontWeight: 'bold', color: item.sentido === 'Entrada' ? '#2980b9' : '#e67e22' }}>
+                      {item.sentido}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca, item.atrasado)}
+                  </td>
+                  <td style={{ padding: '12px', fontWeight: 'bold' }}>
+                    {calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, item.atrasado)}
+                  </td>
                   <td style={{ padding: '12px', color: '#e74c3c', fontWeight: 'bold' }}>
-                    {pRef?.tempoDiferenca} min
-                    <div style={{ fontSize: '0.7em', color: '#999' }}>Status: Realizado</div>
+                    +{pRef?.tempoDiferenca} min
+                    <div style={{ fontSize: '0.7em', color: '#999' }}>Status: Atraso Realizado</div>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+        {dadosFiltrados.length === 0 && !loading && (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#27ae60' }}>
+             ✅ Tudo em ordem! Nenhum veículo fora da tolerância de 10 minutos.
+          </div>
+        )}
       </div>
     </div>
   );
