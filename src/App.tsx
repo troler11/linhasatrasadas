@@ -24,18 +24,17 @@ const App: React.FC = () => {
 
   const converterParaMinutos = (tempo: string | number): number => {
     if (typeof tempo === 'number') return tempo;
-    if (tempo.includes(':')) {
-      const [h, m] = tempo.split(':').map(Number);
+    if (tempo && tempo.toString().includes(':')) {
+      const [h, m] = tempo.toString().split(':').map(Number);
       return (h * 60) + m;
     }
-    return parseInt(tempo, 10) || 0;
+    return parseInt(tempo?.toString(), 10) || 0;
   };
 
   const calcularHorarioRealizado = (horarioBase: string, diferenca: string | number, isAtrasado: boolean) => {
     if (!horarioBase) return '--:--';
     const [h, m] = horarioBase.split(':').map(Number);
     const minutosDiff = converterParaMinutos(diferenca);
-
     const data = new Date();
     data.setHours(h, m, 0, 0);
 
@@ -44,7 +43,6 @@ const App: React.FC = () => {
     } else {
       data.setMinutes(data.getMinutes() - minutosDiff);
     }
-
     return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -55,17 +53,37 @@ const App: React.FC = () => {
         headers: { 'Authorization': 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtaW1vQGFibXByb3RlZ2UuY29tLmJyIiwiZXhwIjoxODcwMzE1NDA2fQ.WoOxG8y0D4iT1hJNxWisBlTmk2i5hVMwQmthRj00m9oWABF2pv_BZfICrASXf_Fkav8p4kZRydUHm-r6T1R9TA' }
       });
       const data = await response.json();
-      setDados(Array.isArray(data) ? data : [data]);
+      const lista = Array.isArray(data) ? data : [data];
+
+      // REGRA DE TOLERÂNCIA:
+      // 1. Se for ADIANTADO (atrasado === false), mostra sempre.
+      // 2. Se for ATRASADO (atrasado === true), só mostra se a diferença for > 10.
+      const dadosFiltrados = lista.filter(item => {
+        const ultimoPonto = item.pontoDeParadaRelatorio?.[item.pontoDeParadaRelatorio.length - 1];
+        const diferencaMinutos = converterParaMinutos(ultimoPonto?.tempoDiferenca || 0);
+        
+        if (item.atrasado) {
+          return diferencaMinutos > 10; // Só mostra atrasos acima de 10 min
+        }
+        return true; // Mostra todos os adiantados (ou você pode filtrar aqui também se quiser)
+      });
+
+      setDados(dadosFiltrados);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading) return <div style={{padding: '20px'}}>Sincronizando dados de viagem...</div>;
+  if (loading) return <div style={{padding: '20px'}}>Aplicando tolerância de 10 minutos...</div>;
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
-      <h1 style={{ color: '#2c3e50', marginBottom: '20px' }}>📋 Monitoramento de Pontualidade Real</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1 style={{ color: '#2c3e50', margin: 0 }}>📋 Monitoramento de Pontualidade (Tolerância 10min)</h1>
+        <div style={{ backgroundColor: '#e74c3c', color: '#fff', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold' }}>
+          {dados.filter(d => d.atrasado).length} Críticos
+        </div>
+      </div>
       
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1100px' }}>
@@ -85,7 +103,6 @@ const App: React.FC = () => {
               const pontos = item.pontoDeParadaRelatorio || [];
               const primeiroPonto = pontos[0];
               const ultimoPonto = pontos[pontos.length - 1];
-
               const hInicial = primeiroPonto?.horario || '--:--';
               const hFinalProg = ultimoPonto?.horario || '--:--';
               
@@ -100,7 +117,7 @@ const App: React.FC = () => {
                     <div style={{ fontSize: '0.8em', color: '#7f8c8d' }}>{item.linhaDescricao}</div>
                   </td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.placa}</td>
-                  <td style={{ padding: '12px', color: '#34495e' }}>{hInicial}</td>
+                  <td style={{ padding: '12px' }}>{hInicial}</td>
                   <td style={{ padding: '12px' }}>{hFinalProg}</td>
                   <td style={{ padding: '12px', fontWeight: 'bold', color: '#2980b9' }}>
                     {hFinalRealizado}
@@ -114,7 +131,7 @@ const App: React.FC = () => {
                       backgroundColor: item.atrasado ? '#fdecea' : '#eafaf1',
                       color: item.atrasado ? '#e74c3c' : '#27ae60', fontWeight: 'bold'
                     }}>
-                      {item.atrasado ? 'ATRASADO' : 'ADIANTADO'}
+                      {item.atrasado ? 'ATRASADO CRÍTICO' : 'ADIANTADO'}
                     </span>
                   </td>
                 </tr>
