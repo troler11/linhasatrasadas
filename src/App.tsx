@@ -34,7 +34,8 @@ const App: React.FC = () => {
       const [h, m] = tempo.toString().split(':').map(Number);
       return (h * 60) + m;
     }
-    return parseInt(tempo?.toString(), 10) || 0;
+    const n = parseInt(tempo?.toString(), 10);
+    return isNaN(n) ? 0 : n;
   };
 
   const calcularHorarioRealizado = (horarioBase: string, diferenca: string | number, isAtrasado: boolean) => {
@@ -45,7 +46,6 @@ const App: React.FC = () => {
     const data = new Date();
     data.setHours(h, m, 0, 0);
 
-    // Regra de soma/subtração baseada no status de atraso
     if (isAtrasado) {
       data.setMinutes(data.getMinutes() + minutosDiff);
     } else {
@@ -72,28 +72,22 @@ const App: React.FC = () => {
       const data = await response.json();
       const lista = Array.isArray(data) ? data : [data];
 
-      const apenasCriticos = lista.filter(item => {
+      const filtrados = lista.filter(item => {
         const pontos = item.pontoDeParadaRelatorio || [];
         if (pontos.length === 0) return false;
 
-        // Ponto de referência: Saída (1º ponto), Entrada (Último ponto)
         const pontoRef = item.sentido === 'Saída' ? pontos[0] : pontos[pontos.length - 1];
         
-        // REGRA SOLICITADA:
-        // 1. Deve ter passado pelo ponto (passou === true)
-        // 2. Deve estar marcado como atrasado (atrasado === true)
-        // 3. A diferença deve ser superior a 10 minutos
+        // Regra: Passou pelo ponto E Atrasado E Diferença maior que 10
         if (pontoRef && pontoRef.passou && item.atrasado === true) {
           const diff = converterParaMinutos(pontoRef.tempoDiferenca);
           return diff > 10;
         }
-
-        // Se atrasado for false ou não passou, descarta (não aparece no relatório)
         return false; 
       });
 
-      setDadosOriginal(apenasCriticos);
-      setDadosFiltrados(apenasCriticos);
+      setDadosOriginal(filtrados);
+      setDadosFiltrados(filtrados);
     } catch (err) { 
         console.error(err);
         setDadosOriginal([]);
@@ -104,7 +98,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     let resultado = dadosOriginal;
-    if (filtroEmpresa !== 'TODAS') resultado = resultado.filter(d => d.empresa.nome === filtroEmpresa);
+    if (filtroEmpresa !== 'TODAS') {
+        resultado = resultado.filter(d => d.empresa.nome === filtroEmpresa);
+    }
     setDadosFiltrados(resultado);
   }, [filtroEmpresa, dadosOriginal]);
 
@@ -112,7 +108,7 @@ const App: React.FC = () => {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-      <h1 style={{ color: '#c0392b' }}>⚠️ Relatório de Atrasos Críticos (Apenas Atrasos > 10min)</h1>
+      <h1 style={{ color: '#c0392b' }}>⚠️ Relatório de Atrasos Críticos (Superior a 10min)</h1>
 
       <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
         <div>
@@ -137,7 +133,7 @@ const App: React.FC = () => {
               <th style={{ padding: '12px' }}>Sentido</th>
               <th style={{ padding: '12px' }}>H. Inic. Real.</th>
               <th style={{ padding: '12px' }}>H. Final Real.</th>
-              <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>Atraso Somado</th>
+              <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>Minutos de Atraso</th>
             </tr>
           </thead>
           <tbody>
@@ -160,14 +156,13 @@ const App: React.FC = () => {
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
-                    {calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca, item.atrasado)}
+                    {pInic ? calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca, item.atrasado) : '--:--'}
                   </td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>
-                    {calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, item.atrasado)}
+                    {pFim ? calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, item.atrasado) : '--:--'}
                   </td>
                   <td style={{ padding: '12px', color: '#e74c3c', fontWeight: 'bold' }}>
-                    +{pRef?.tempoDiferenca} min
-                    <div style={{ fontSize: '0.7em', color: '#999' }}>Status: Atraso Realizado</div>
+                    {pRef ? `+${pRef.tempoDiferenca}` : '0'} min
                   </td>
                 </tr>
               );
@@ -176,7 +171,7 @@ const App: React.FC = () => {
         </table>
         {dadosFiltrados.length === 0 && !loading && (
           <div style={{ padding: '40px', textAlign: 'center', color: '#27ae60' }}>
-             ✅ Tudo em ordem! Nenhum veículo fora da tolerância de 10 minutos.
+             ✅ Tudo em ordem para os critérios selecionados.
           </div>
         )}
       </div>
