@@ -5,6 +5,7 @@ interface PontoParada {
   horario: string;
   tempoDiferenca: string | number;
   passou: boolean;
+  atrasado: boolean; // Agora usamos este campo do ponto
 }
 
 interface Relatorio {
@@ -15,7 +16,6 @@ interface Relatorio {
   linhaCodigo: string;
   status: string;
   sentido: string; 
-  atrasado: boolean;
   empresa: { id: number; nome: string };
   pontoDeParadaRelatorio: PontoParada[];
 }
@@ -38,7 +38,7 @@ const App: React.FC = () => {
     return isNaN(n) ? 0 : n;
   };
 
-  const calcularHorarioRealizado = (horarioBase: string, diferenca: string | number, isAtrasado: boolean) => {
+  const calcularHorarioRealizado = (horarioBase: string, diferenca: string | number, estaAtrasado: boolean) => {
     if (!horarioBase) return '--:--';
     const [h, m] = horarioBase.split(':').map(Number);
     const minutosDiff = converterParaMinutos(diferenca);
@@ -46,7 +46,7 @@ const App: React.FC = () => {
     const data = new Date();
     data.setHours(h, m, 0, 0);
 
-    if (isAtrasado) {
+    if (estaAtrasado) {
       data.setMinutes(data.getMinutes() + minutosDiff);
     } else {
       data.setMinutes(data.getMinutes() - minutosDiff);
@@ -76,9 +76,11 @@ const App: React.FC = () => {
         const pontos = item.pontoDeParadaRelatorio || [];
         if (pontos.length === 0) return false;
 
+        // Ponto de Referência: Início para Saída, Fim para Entrada
         const pontoRef = item.sentido === 'Saída' ? pontos[0] : pontos[pontos.length - 1];
         
-        if (pontoRef && pontoRef.passou && item.atrasado === true) {
+        // NOVA REGRA: O atrasado deve ser TRUE no ponto de referência
+        if (pontoRef && pontoRef.passou && pontoRef.atrasado === true) {
           const diff = converterParaMinutos(pontoRef.tempoDiferenca);
           return diff > 10;
         }
@@ -108,7 +110,7 @@ const App: React.FC = () => {
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
       <h1 style={{ color: '#c0392b' }}>
-        {`⚠️ Relatório de Atrasos Críticos (Acima de 10 min)`}
+        {`⚠️ Relatório de Atrasos Críticos (Superior a 10 min)`}
       </h1>
 
       <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
@@ -157,13 +159,13 @@ const App: React.FC = () => {
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
-                    {pInic ? calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca, item.atrasado) : '--:--'}
+                    {pInic ? calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca, pInic.atrasado) : '--:--'}
                   </td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>
-                    {pFim ? calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, item.atrasado) : '--:--'}
+                    {pFim ? calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, pFim.atrasado) : '--:--'}
                   </td>
                   <td style={{ padding: '12px', color: '#e74c3c', fontWeight: 'bold' }}>
-                    {pRef ? `+${pRef.tempoDiferenca} min` : '0 min'}
+                    {pRef ? `+${pRef.tempoDiferenca}` : '0'} min
                   </td>
                 </tr>
               );
@@ -172,7 +174,7 @@ const App: React.FC = () => {
         </table>
         {dadosFiltrados.length === 0 && !loading && (
           <div style={{ padding: '40px', textAlign: 'center', color: '#27ae60' }}>
-             {`✅ Nenhum atraso crítico encontrado.`}
+             {`✅ Nenhum atraso crítico no ponto de referência.`}
           </div>
         )}
       </div>
