@@ -25,9 +25,7 @@ const App: React.FC = () => {
   const [dadosFiltrados, setDadosFiltrados] = useState<Relatorio[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Estado para a Data (Padrão: Hoje)
   const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0]);
-  
   const [filtroEmpresa, setFiltroEmpresa] = useState<string>('TODAS');
   const [filtroSentido, setFiltroSentido] = useState<string>('TODOS');
 
@@ -46,11 +44,11 @@ const App: React.FC = () => {
     const minutosDiff = converterParaMinutos(diferenca);
     const data = new Date();
     data.setHours(h, m, 0, 0);
+    // Nota: Aqui somamos a diferença. Se for adiantado, o valor de diferença da API costuma ser negativo ou o status muda.
     data.setMinutes(data.getMinutes() + minutosDiff);
     return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Função para formatar a data do input (YYYY-MM-DD) para o padrão da API (D/M/YYYY)
   const formatarDataParaApi = (dataIso: string) => {
     const [year, month, day] = dataIso.split('-');
     return `${parseInt(day)}/${parseInt(month)}/${year}`;
@@ -59,7 +57,6 @@ const App: React.FC = () => {
   const fetchData = async (dataParaBusca: string) => {
     setLoading(true);
     const dataFormatada = formatarDataParaApi(dataParaBusca);
-    
     const url = `https://abmbus.com.br:8181/api/usuario/pesquisarelatorio?linhas=&empresas=3528816,3528804,3528807,3536646,3528817,3529151,3536839,3529224,3529142,3528920,3536708,3529024,3536624,3536600,3536756,3536730,3528806,3529220,3529258,3536796,3528893,3529153,3528928,3529147,3529222,3528872&dataInicial=${dataFormatada}&dataFinal=${dataFormatada}&periodo=&sentido=&agrupamentos=`;
     
     try {
@@ -82,17 +79,11 @@ const App: React.FC = () => {
     } catch (err) { 
         console.error(err);
         setDadosOriginal([]);
-    } finally { 
-        setLoading(false); 
-    }
+    } finally { setLoading(false); }
   };
 
-  // Efeito para buscar dados sempre que a DATA mudar
-  useEffect(() => {
-    fetchData(dataSelecionada);
-  }, [dataSelecionada]);
+  useEffect(() => { fetchData(dataSelecionada); }, [dataSelecionada]);
 
-  // Efeito para filtrar localmente (Empresa/Sentido)
   useEffect(() => {
     let resultado = dadosOriginal;
     if (filtroEmpresa !== 'TODAS') resultado = resultado.filter(d => d.empresa.nome === filtroEmpresa);
@@ -106,90 +97,91 @@ const App: React.FC = () => {
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
       <h1 style={{ color: '#c0392b' }}>⚠️ Monitoramento de Atrasos Críticos</h1>
 
-      {/* Painel de Controles */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        
-        {/* FILTRO DE DATA */}
         <div>
-          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Selecionar Data:</label>
-          <input 
-            type="date" 
-            value={dataSelecionada}
-            onChange={(e) => setDataSelecionada(e.target.value)}
-            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #c0392b', fontWeight: 'bold' }}
-          />
+          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Data:</label>
+          <input type="date" value={dataSelecionada} onChange={(e) => setDataSelecionada(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #c0392b' }} />
         </div>
-
         <div>
           <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Empresa:</label>
-          <select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '200px' }}>
-            <option value="TODAS">Todas as Empresas</option>
+          <select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
+            <option value="TODAS">Todas</option>
             {empresasUnicas.map(emp => <option key={emp} value={emp}>{emp}</option>)}
           </select>
         </div>
-
         <div>
           <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Sentido:</label>
-          <select value={filtroSentido} onChange={(e) => setFiltroSentido(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '150px' }}>
-            <option value="TODOS">Todos os Sentidos</option>
+          <select value={filtroSentido} onChange={(e) => setFiltroSentido(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
+            <option value="TODOS">Todos</option>
             <option value="Entrada">Entrada</option>
             <option value="Saída">Saída</option>
           </select>
         </div>
-
-        <button 
-          onClick={() => fetchData(dataSelecionada)}
-          style={{ alignSelf: 'flex-end', padding: '10px 20px', backgroundColor: '#2c3e50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          {loading ? 'Carregando...' : '🔄 Atualizar'}
+        <button onClick={() => fetchData(dataSelecionada)} style={{ alignSelf: 'flex-end', padding: '10px 20px', backgroundColor: '#2c3e50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+          {loading ? '...' : '🔄'}
         </button>
       </div>
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center' }}>Buscando dados na API da ABM Bus para o dia {formatarDataParaApi(dataSelecionada)}...</div>
+        <div style={{ padding: '40px', textAlign: 'center' }}>Carregando...</div>
       ) : (
-        <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
             <thead style={{ backgroundColor: '#c0392b', color: '#fff' }}>
               <tr>
                 <th style={{ padding: '12px' }}>Empresa / Linha</th>
-                <th style={{ padding: '12px' }}>Codigo</th>
                 <th style={{ padding: '12px' }}>Prefixo</th>
                 <th style={{ padding: '12px' }}>Sentido</th>
-                <th style={{ padding: '12px' }}>H. Programado</th>
-                <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>H. Realizado</th>
+                <th style={{ padding: '12px', backgroundColor: '#34495e' }}>H. Inic. Prog.</th>
+                <th style={{ padding: '12px', backgroundColor: '#34495e' }}>H. Inic. Real.</th>
+                <th style={{ padding: '12px' }}>H. Final Prog.</th>
+                <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>H. Final Real.</th>
                 <th style={{ padding: '12px' }}>Atraso</th>
               </tr>
             </thead>
             <tbody>
               {dadosFiltrados.map((item) => {
                 const pontos = item.pontoDeParadaRelatorio || [];
-                const pontoRef = item.sentido === 'Saída' ? pontos[0] : pontos[pontos.length - 1];
-                const hProg = pontoRef?.horario || '--:--';
-                const hRealizado = calcularHorarioRealizado(hProg, pontoRef?.tempoDiferenca || 0);
+                const pontoInic = pontos[0];
+                const pontoFim = pontos[pontos.length - 1];
+                
+                // Lógica de Sentido para o Atraso Principal
+                const pontoRefAtraso = item.sentido === 'Saída' ? pontoInic : pontoFim;
+
+                // Horários Iniciais (Sempre ponto 0)
+                const hInicProg = pontoInic?.horario || '--:--';
+                const hInicReal = calcularHorarioRealizado(hInicProg, pontoInic?.tempoDiferenca || 0);
+
+                // Horários Finais (Sempre último ponto)
+                const hFinalProg = pontoFim?.horario || '--:--';
+                const hFinalReal = calcularHorarioRealizado(hFinalProg, pontoFim?.tempoDiferenca || 0);
 
                 return (
                   <tr key={item.id} style={{ borderBottom: '1px solid #eee', textAlign: 'center' }}>
                     <td style={{ padding: '12px', textAlign: 'left' }}>
                       <div style={{ fontWeight: 'bold' }}>{item.empresa?.nome}</div>
-                      <div style={{ fontSize: '0.8em', color: '#666' }}>{item.linhaDescricao}</div>
+                      <div style={{ fontSize: '0.8em', color: '#666' }}>{item.linhaDescricao} ({item.linhaCodigo})</div>
                     </td>
-                     <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.linhaCodigo}</td>
                     <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.descricaoVeiculo}</td>
                     <td style={{ padding: '12px' }}>{item.sentido}</td>
-                    <td style={{ padding: '12px' }}>{hProg}</td>
-                    <td style={{ padding: '12px', fontWeight: 'bold', color: '#c0392b' }}>{hRealizado}</td>
+                    
+                    {/* Colunas Iniciais */}
+                    <td style={{ padding: '12px' }}>{hInicProg}</td>
+                    <td style={{ padding: '12px', fontWeight: 'bold', color: '#34495e' }}>{hInicReal}</td>
+                    
+                    {/* Colunas Finais */}
+                    <td style={{ padding: '12px' }}>{hFinalProg}</td>
+                    <td style={{ padding: '12px', fontWeight: 'bold', color: '#c0392b' }}>{hFinalReal}</td>
+                    
                     <td style={{ padding: '12px', color: '#e74c3c', fontWeight: 'bold' }}>
-                      {pontoRef?.tempoDiferenca} min
+                      {pontoRefAtraso?.tempoDiferenca} min
+                      <div style={{fontSize: '0.7em', color: '#999'}}>Ref: {item.sentido === 'Saída' ? 'Início' : 'Fim'}</div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          {dadosFiltrados.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>Nenhum dado crítico para esta data.</div>
-          )}
         </div>
       )}
     </div>
