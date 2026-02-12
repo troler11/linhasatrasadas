@@ -27,6 +27,7 @@ const App: React.FC = () => {
   
   const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0]);
   const [filtroEmpresa, setFiltroEmpresa] = useState<string>('TODAS');
+  const [filtroSentido, setFiltroSentido] = useState<string>('TODOS');
 
   const converterParaMinutos = (tempo: string | number): number => {
     if (typeof tempo === 'number') return tempo;
@@ -42,17 +43,14 @@ const App: React.FC = () => {
     if (!horarioBase) return '--:--';
     const [h, m] = horarioBase.split(':').map(Number);
     const minutosDiff = converterParaMinutos(diferenca);
-
     const data = new Date();
     data.setHours(h, m, 0, 0);
 
-    // Se o ponto específico estiver como atrasado, soma. Caso contrário, subtrai.
     if (estaAtrasado) {
       data.setMinutes(data.getMinutes() + minutosDiff);
     } else {
       data.setMinutes(data.getMinutes() - minutosDiff);
     }
-
     return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -77,12 +75,8 @@ const App: React.FC = () => {
         const pontos = item.pontoDeParadaRelatorio || [];
         if (pontos.length === 0) return false;
 
-        // REGRA DE OURO:
-        // Saída -> Ponto 0 (Início)
-        // Entrada -> Último Ponto (Fim)
         const pontoRef = item.sentido === 'Saída' ? pontos[0] : pontos[pontos.length - 1];
         
-        // Só mostra se passou pelo ponto de referência E o status de atraso NAQUELE PONTO for true
         if (pontoRef && pontoRef.passou && pontoRef.atrasado === true) {
           const diff = converterParaMinutos(pontoRef.tempoDiferenca);
           return diff > 10;
@@ -102,11 +96,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     let resultado = dadosOriginal;
-    if (filtroEmpresa !== 'TODAS') {
-        resultado = resultado.filter(d => d.empresa.nome === filtroEmpresa);
-    }
+    if (filtroEmpresa !== 'TODAS') resultado = resultado.filter(d => d.empresa.nome === filtroEmpresa);
+    if (filtroSentido !== 'TODOS') resultado = resultado.filter(d => d.sentido === filtroSentido);
     setDadosFiltrados(resultado);
-  }, [filtroEmpresa, dadosOriginal]);
+  }, [filtroEmpresa, filtroSentido, dadosOriginal]);
 
   const empresasUnicas = Array.from(new Set(dadosOriginal.map(d => d.empresa.nome))).sort();
 
@@ -116,30 +109,43 @@ const App: React.FC = () => {
         {`⚠️ Monitoramento de Atrasos Críticos (Acima de 10 min)`}
       </h1>
 
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginBottom: '20px', backgroundColor: '#fff', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
         <div>
           <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Data:</label>
           <input type="date" value={dataSelecionada} onChange={(e) => setDataSelecionada(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #c0392b' }} />
         </div>
         <div>
           <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Empresa:</label>
-          <select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '200px' }}>
+          <select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '180px' }}>
             <option value="TODAS">Todas as Empresas</option>
             {empresasUnicas.map(emp => <option key={emp} value={emp}>{emp}</option>)}
           </select>
         </div>
+        <div>
+          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Sentido:</label>
+          <select value={filtroSentido} onChange={(e) => setFiltroSentido(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '120px' }}>
+            <option value="TODOS">Todos</option>
+            <option value="Entrada">Entrada</option>
+            <option value="Saída">Saída</option>
+          </select>
+        </div>
+        <button onClick={() => fetchData(dataSelecionada)} style={{ alignSelf: 'flex-end', padding: '10px 20px', backgroundColor: '#2c3e50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+          🔄 Atualizar
+        </button>
       </div>
 
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1100px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
           <thead style={{ backgroundColor: '#c0392b', color: '#fff' }}>
             <tr>
               <th style={{ padding: '12px' }}>Empresa / Linha</th>
               <th style={{ padding: '12px' }}>Prefixo</th>
               <th style={{ padding: '12px' }}>Sentido</th>
+              <th style={{ padding: '12px' }}>H. Inic. Prog.</th>
               <th style={{ padding: '12px' }}>H. Inic. Real.</th>
+              <th style={{ padding: '12px' }}>H. Final Prog.</th>
               <th style={{ padding: '12px' }}>H. Final Real.</th>
-              <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>Atraso Validado</th>
+              <th style={{ padding: '12px', backgroundColor: '#2c3e50' }}>Atraso</th>
             </tr>
           </thead>
           <tbody>
@@ -161,15 +167,13 @@ const App: React.FC = () => {
                       {item.sentido}
                     </span>
                   </td>
-                  <td style={{ padding: '12px' }}>
-                    {pInic ? calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca, pInic.atrasado) : '--:--'}
-                  </td>
-                  <td style={{ padding: '12px', fontWeight: 'bold' }}>
-                    {pFim ? calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, pFim.atrasado) : '--:--'}
-                  </td>
+                  <td style={{ padding: '12px' }}>{pInic?.horario || '--:--'}</td>
+                  <td style={{ padding: '12px' }}>{pInic ? calcularHorarioRealizado(pInic.horario, pInic.tempoDiferenca, pInic.atrasado) : '--:--'}</td>
+                  <td style={{ padding: '12px' }}>{pFim?.horario || '--:--'}</td>
+                  <td style={{ padding: '12px', fontWeight: 'bold' }}>{pFim ? calcularHorarioRealizado(pFim.horario, pFim.tempoDiferenca, pFim.atrasado) : '--:--'}</td>
                   <td style={{ padding: '12px', color: '#e74c3c', fontWeight: 'bold' }}>
                     {pRef ? `+${pRef.tempoDiferenca}` : '0'} min
-                    <div style={{ fontSize: '0.75em', color: '#999', fontWeight: 'normal' }}>
+                    <div style={{ fontSize: '0.7em', color: '#999', fontWeight: 'normal' }}>
                         {item.sentido === 'Saída' ? '(Ref: Início)' : '(Ref: Fim)'}
                     </div>
                   </td>
@@ -180,7 +184,7 @@ const App: React.FC = () => {
         </table>
         {dadosFiltrados.length === 0 && !loading && (
           <div style={{ padding: '40px', textAlign: 'center', color: '#27ae60' }}>
-             {`✅ Nenhum atraso crítico no ponto de referência selecionado.`}
+             {`✅ Nenhum atraso crítico para os filtros selecionados.`}
           </div>
         )}
       </div>
