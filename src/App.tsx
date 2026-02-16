@@ -168,7 +168,7 @@ const App: React.FC = () => {
               const pRef = item.sentido === 'Saída' ? pInic : pFim;
               return (
                 <tr key={item.id} style={{ borderBottom: '1px solid #eee', textAlign: 'center' }}>
-                  <td style={{ padding: '12px', textAlign: 'left' }}><strong>{item.empresa?.nome}</strong><br/><small>{item.linhaDescricao} ({item.linhaCodigo})</small></td>
+                  <td style={{ padding: '12px', textAlign: 'left' }}><strong>{item.empresa?.nome}</strong><br/><small>{item.linhaDescricao} - ({item.linhaCodigo})</small></td>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.descricaoVeiculo}</td>
                   <td style={{ padding: '12px' }}>{item.sentido}</td>
                   <td style={{ padding: '12px' }}>{pInic?.horario}</td>
