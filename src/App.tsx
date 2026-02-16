@@ -13,7 +13,6 @@ interface Relatorio {
   data: string;
   linhaDescricao: string;
   descricaoVeiculo: string;
-  linhaCodigo: string;
   status: string;
   linhaCodigo: string;
   sentido: string; 
