@@ -38,7 +38,7 @@ const App: React.FC = () => {
       const [h, m] = tempo.toString().split(':').map(Number);
       return (h * 60) + m;
     }
-    const n = parseInt(tempo?.toString(), 10);
+    const n = parseInt(tempo?.toString() || '0', 10);
     return isNaN(n) ? 0 : n;
   };
 
@@ -89,12 +89,13 @@ const App: React.FC = () => {
     if (filtroSentido !== 'TODOS') resultado = resultado.filter(d => d.sentido === filtroSentido);
 
     if (sortConfig) {
+      const { key, direction } = sortConfig; // Garantia de que não é null
       resultado.sort((a, b) => {
         let valA: any, valB: any;
         const pInicA = a.pontoDeParadaRelatorio[0], pFimA = a.pontoDeParadaRelatorio[a.pontoDeParadaRelatorio.length - 1];
         const pInicB = b.pontoDeParadaRelatorio[0], pFimB = b.pontoDeParadaRelatorio[b.pontoDeParadaRelatorio.length - 1];
 
-        switch (sortConfig.key) {
+        switch (key) {
           case 'empresa': valA = a.empresa.nome; valB = b.empresa.nome; break;
           case 'prefixo': valA = a.descricaoVeiculo; valB = b.descricaoVeiculo; break;
           case 'sentido': valA = a.sentido; valB = b.sentido; break;
@@ -107,22 +108,13 @@ const App: React.FC = () => {
           default: valA = ''; valB = '';
         }
 
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (valA < valB) return direction === 'asc' ? -1 : 1;
+        if (valA > valB) return direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
     setDadosFiltrados(resultado);
   }, [filtroEmpresa, filtroSentido, dadosOriginal, sortConfig]);
-
-  const HeaderCell = ({ label, sortKey, bg }: { label: string, sortKey?: string, bg?: string }) => (
-    <th 
-      onClick={() => sortKey && handleSort(sortKey)}
-      style={{ padding: '12px', cursor: sortKey ? 'pointer' : 'default', backgroundColor: bg || '#c0392b', borderRight: '1px solid rgba(255,255,255,0.1)' }}
-    >
-      {label} {sortConfig?.key === sortKey ? (sortConfig.direction === 'asc' ? '🔼' : '🔽') : ''}
-    </th>
-  );
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
@@ -145,14 +137,29 @@ const App: React.FC = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
           <thead style={{ color: '#fff' }}>
             <tr>
-              <HeaderCell label="Empresa / Linha" sortKey="empresa" />
-              <HeaderCell label="Prefixo" sortKey="prefixo" />
-              <HeaderCell label="Sentido" sortKey="sentido" />
-              <HeaderCell label="H. Inic. Prog." sortKey="hInicProg" />
-              <HeaderCell label="H. Inic. Real." />
-              <HeaderCell label="H. Final Prog." sortKey="hFinalProg" />
-              <HeaderCell label="H. Final Real." />
-              <HeaderCell label="Atraso" sortKey="atraso" bg="#2c3e50" />
+              {[
+                { label: "Empresa / Linha", key: "empresa" },
+                { label: "Prefixo", key: "prefixo" },
+                { label: "Sentido", key: "sentido" },
+                { label: "H. Inic. Prog.", key: "hInicProg" },
+                { label: "H. Inic. Real.", key: "" },
+                { label: "H. Final Prog.", key: "hFinalProg" },
+                { label: "H. Final Real.", key: "" },
+                { label: "Atraso", key: "atraso" }
+              ].map((col) => (
+                <th 
+                  key={col.label}
+                  onClick={() => col.key && handleSort(col.key)}
+                  style={{ 
+                    padding: '12px', 
+                    cursor: col.key ? 'pointer' : 'default', 
+                    backgroundColor: col.key === 'atraso' ? '#2c3e50' : '#c0392b',
+                    borderRight: '1px solid rgba(255,255,255,0.1)' 
+                  }}
+                >
+                  {col.label} {sortConfig?.key === col.key ? (sortConfig.direction === 'asc' ? '🔼' : '🔽') : ''}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
